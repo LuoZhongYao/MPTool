@@ -1,21 +1,14 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <stdlib.h>
 #include <string.h>
 #include <poll.h>
 #include <stdbool.h>
 #include <getopt.h>
-#include <sys/ioctl.h>
-#include <linux/serial.h>
-#include <limits.h>
-#include <termios.h>
-#include "baudrate.h"
 #include "rtlmp.h"
 #include "rtlbt.h"
 #include "rtlimg.h"
+#include "transport.h"
 
 #define HCI_COMMAND_PKT     0x01
 #define HCI_ACLDATA_PKT     0x02
@@ -35,6 +28,7 @@
 #define HCI_MAX_EVENT_SIZE   260
 #define HCI_MAX_FRAME_SIZE  (HCI_MAX_ACL_SIZE + 4)
 
+static struct transport *trans;
 uint16_t crc16_check(uint8_t *buf, uint16_t len, uint16_t value)
 {
 
@@ -56,139 +50,12 @@ uint16_t crc16_check(uint8_t *buf, uint16_t len, uint16_t value)
     return value;
 }
 
-static speed_t tty_get_speed(int speed)
-{
-#define _(n) case n: return B ##n
-	switch (speed) {
-		_(9600); break;
-		_(19200); break;
-		_(38400); break;
-		_(57600); break;
-		_(115200); break;
-		_(230400); break;
-		_(460800); break;
-		_(500000); break;
-		_(576000); break;
-		_(921600); break;
-		_(1000000); break;
-		_(1152000); break;
-		_(1500000); break;
-		_(2000000); break;
-		_(2500000); break;
-		_(3000000); break;
-		_(3500000); break;
-		_(4000000); break;
-	default:
-		fprintf(stderr, "Not support %d\n", speed);
-	break;
-	}
-#undef _
-	return -1;
-}
-
-static int uart_open(const char *dev, int speed)
-{
-	int fd;
-	speed_t baudrate;
-	struct termios ti;
-	struct serial_struct serial;
-
-	if (dev == NULL)
-		return -1;
-
-	fd = open(dev, O_RDWR | O_NOCTTY);
-	if (fd < 0) {
-		perror(dev);
-		exit(1);
-	}
-
-	if (!isatty(fd))
-		return fd;
-
-	tcflush(fd, TCIOFLUSH);
-
-	if (tcgetattr(fd, &ti) < 0) {
-		perror("get port settings");
-		exit(1);
-	}
-	cfmakeraw(&ti);
-	ti.c_cflag |= CLOCAL;
-	ti.c_cflag &= ~CRTSCTS;
-	ti.c_cflag &= ~CSTOPB;
-	ti.c_cflag |= CS8;
-	ti.c_cflag &= ~PARENB;
-	ti.c_cc[VMIN] = 1;
-	ti.c_cc[VTIME] = 0;
-	baudrate = tty_get_speed(speed);
-	if (baudrate != -1) {
-		cfsetispeed(&ti, baudrate);
-		cfsetospeed(&ti, baudrate);
-	}
-
-	if (tcsetattr(fd, TCSANOW, &ti) < 0) {
-		perror("set port settings");
-		exit(1);
-	}
-
-	tcflush(fd, TCIOFLUSH);
-	if (baudrate == -1) {
-		if (set_baudrate(fd, speed)) {
-			perror("set baudrate");
-			exit(1);
-		}
-	}
-
-	if (ioctl(fd, TIOCGSERIAL, &serial) == 0) {
-		serial.flags |= ASYNC_LOW_LATENCY;
-		if (ioctl(fd, TIOCSSERIAL, &serial)) {
-			perror("set serial");
-		}
-	}
-
-	return fd;
-}
-
-void uart_set_baudrate(int fd, unsigned speed)
-{
-	speed_t baudrate;
-	struct termios ti;
-
-	tcgetattr(fd, &ti);
-	baudrate = tty_get_speed(speed);
-	if (baudrate != -1) {
-		cfsetispeed(&ti, baudrate);
-		cfsetospeed(&ti, baudrate);
-	}
-
-	if (tcsetattr(fd, TCSANOW, &ti) < 0) {
-		perror("set port settings");
-		exit(1);
-	}
-
-	tcflush(fd, TCIOFLUSH);
-	if (baudrate == -1) {
-		if (set_baudrate(fd, speed)) {
-			perror("set baudrate");
-			exit(1);
-		}
-	}
-}
-
-static int ufd = -1;
-int hci_write(const uint8_t hdr[4], const void *params, uint8_t size)
-{
-	write(ufd, hdr, 4);
-	write(ufd, params, size);
-
-	return 0;
-}
-
 static int read_bytes(void *buf, uint16_t size)
 {
 	int reqsz;
 
 	for (reqsz = 0; reqsz < size; ) {
-		int rz = read(ufd, buf + reqsz, size - reqsz);
+		int rz = transport_read(trans, buf + reqsz, size - reqsz);
 		if (rz < 0) {
 			return -1;
 		}
@@ -221,14 +88,18 @@ int hci_read(void *buf, uint16_t size)
 
 void hci_send_cmd(uint16_t opcode, const void *params, uint8_t size)
 {
-	const uint8_t hdr [] = {
-		0x01,
-		opcode & 0xff,
-		(opcode >> 8) & 0xff,
-		size,
-	};
+	uint8_t hdr[260];
 
-	hci_write(hdr, params, size);
+	hdr[0] = 0x01;
+	hdr[1] = opcode & 0xff;
+	hdr[2] = (opcode >> 8) & 0xff;
+	hdr[3] = size;
+
+	if (params && size) {
+		memcpy(hdr + 4, params, size);
+	}
+
+	transport_write(trans, hdr, 4 + size);
 }
 
 int hci_send_cmd_sync(uint16_t opcode, const void *params, uint8_t size,
@@ -253,19 +124,25 @@ int hci_send_cmd_sync(uint16_t opcode, const void *params, uint8_t size,
 int rtlmp_write(const void *mp, uint32_t size)
 {
 	uint16_t crc;
+	uint8_t buf[size + 2];
 
-	write(ufd, mp, size);
 	crc = crc16_check((uint8_t *)mp, size, 0);
-	write(ufd, &crc, 2);
+	memcpy(buf, mp, size);
+	memcpy(buf + size, &crc, 2);
 
+	transport_write(trans, buf, size + 2);
 	return 0;
 }
 
 int rtlmp_read(void *mp, uint32_t size)
 {
 	uint16_t crc;
-	read_bytes(mp, size);
-	read_bytes(&crc, 2);
+	uint8_t buf[size + 2];
+
+	read_bytes(buf, size + 2);
+	memcpy(mp, buf, size);
+
+	crc = buf[size] | (buf[size + 1] << 8);
 
 	return crc == crc16_check(mp, size, 0);
 }
@@ -282,25 +159,61 @@ void rtlmp_read_x00(void)
 	read_bytes(buf, sizeof(buf));
 }
 
+struct transport *serial_transport_open(const char *dev, unsigned speed);
+struct transport *usb_transport_open(uint16_t vid, uint16_t pid, int iface, unsigned flags);
+
+#define TRANS_IFACE_NONE	0x00
+#define TRANS_IFACE_SERIAL	0x01
+#define TRANS_IFACE_USB		0x02
+
+#define check_and_set_trans_iface(trans_iface, iface)	do {								\
+	if (trans_iface != TRANS_IFACE_NONE && trans_iface != iface) {							\
+		fprintf(stderr, "can't set multiple transmission interfaces at the same time\n");	\
+		exit(1);																			\
+	}																						\
+	trans_iface = iface;																	\
+} while(0)
+
 int main(int argc, char **argv)
 {
-	int c;
-
+	int c, rc;
+	int iface = 0, flags = 0, trans_iface = TRANS_IFACE_NONE;
+	uint16_t vid, pid;
 	unsigned speed = 115200;
 	const char *tty = "/dev/ttyS0";
 	const char *fw = "firmware0.bin";
 	const char *mp = "app.bin";
 
-	while (-1 != (c = getopt(argc, argv, "d:b:f:m:"))) {
+	while (-1 != (c = getopt(argc, argv, "t:b:f:m:u:k"))) {
 		switch (c) {
-		case 'd': tty = optarg; break;
+		case 'k': flags |= 0x0001; break;
+		case 'u': {
+			check_and_set_trans_iface(trans_iface, TRANS_IFACE_USB);
+			sscanf(optarg, "%04hx:%04hx,%d", &vid, &pid, &iface);
+		} break;
+		case 't':  {
+			tty = optarg;
+			check_and_set_trans_iface(trans_iface, TRANS_IFACE_SERIAL);
+		} break;
 		case 'b': speed = strtol(optarg, NULL, 0); break;
 		case 'f': fw = optarg; break;
 		case 'm': mp = optarg; break;
 		}
 	}
 
-	ufd = uart_open(tty, 115200);
+	if (TRANS_IFACE_NONE == trans_iface || TRANS_IFACE_SERIAL == trans_iface) {
+		trans = serial_transport_open(tty, 115200);
+	} else if (TRANS_IFACE_USB == trans_iface) {
+		trans = usb_transport_open(vid, pid, iface, flags);
+	}
+
+	if(trans == NULL) {
+		fprintf(stderr, "can't open transport interfaces VID:%04x, PID:%04x, IFACE:%d %s\n",
+			vid, pid, iface, strerror(errno));
+		exit(1);
+	}
+
+	//ufd = uart_open(tty, 115200);
 	//rtlbt_change_baudrate(speed);
 	//usleep(1000 * 1000);
 	//uart_set_baudrate(ufd, speed);
@@ -317,11 +230,22 @@ int main(int argc, char **argv)
 		0x31, 0x38, 0x20, 0x00});
 
 	rtlmp_read_x00();
-	rtlmp_change_baudrate(speed);
-	uart_set_baudrate(ufd, speed);
+	rc = rtlmp_change_baudrate(speed);
+	if (rc != 0) {
+		fprintf(stderr, "change baudrate %d failure, rc = %d\n", speed, rc);
+		goto _quit;
+	}
 
-	rtlimg_download(mp);
+	transport_set_baudrate(trans, speed);
+	rc = rtlimg_download(mp);
+	if (rc != 0) {
+		fprintf(stderr, "rtlimg download failure, rc = %d\n", rc);
+		goto _quit;
+	}
 	rtlmp_reset(0x01);
 
-	return 0;
+_quit:
+	transport_close(trans);
+
+	return rc;
 }

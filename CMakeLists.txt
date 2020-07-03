@@ -10,4 +10,8 @@ target_sources(MPTool PRIVATE
 	rtlmp.c
 	rtlbt.c
 	rtlimg.c
+	usb_transport.c
+	serial_transport.c
 	)
+
+target_link_libraries(MPTool PRIVATE usb-1.0)

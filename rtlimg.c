@@ -137,7 +137,9 @@ int rtlimg_download(const char *img)
 
 	off = sizeof(hdr) + nr * sizeof(struct subhdr);
 	for (i = 0; i < nr; i++) {
-		do_img_download(fd, off, sub[i].downloadAddr);
+		if (do_img_download(fd, off, sub[i].downloadAddr)) {
+			fprintf(stderr, "Download failure: offset = %x, addresss %x\n", off, sub[i].downloadAddr);
+		}
 		off += sub[i].size;
 	}
 
