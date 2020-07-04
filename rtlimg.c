@@ -36,10 +36,26 @@ static void parse_mp(struct mphdr *hdr, struct dwhdr *dw)
 	}
 }
 
+static int slice_download(uint32_t addr, uint8_t *buf, uint32_t size)
+{
+	int rs = 0;
+	uint32_t wn = 0;
+
+	while (wn < size)  {
+		int c = MIN(2048, size - wn);
+		rs = rtlmp_write_flash(addr + wn, c, buf + wn);
+		if (rs < 0)
+			break;
+		wn += c;
+	}
+
+	return rs;
+}
+
 static int do_download(FILE *fd, struct dwhdr *dw)
 {
 	int rs = -1;
-	uint8_t dat[2048];
+	uint8_t dat[4096];
 	uint16_t crc16;
 	uint32_t dwsz = 0;
 
@@ -53,7 +69,9 @@ static int do_download(FILE *fd, struct dwhdr *dw)
 			break;
 
 		crc16 = crc16_check(dat, rz, 0);
-		rs = rtlmp_write_flash(dw->dw_addr + dwsz, rz, dat);
+
+		rs = slice_download(dw->dw_addr + dwsz, dat, rz);
+
 		if (rs < 0)
 			break;
 

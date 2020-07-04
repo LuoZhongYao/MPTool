@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <errno.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <string.h>
 #include "transport.h"
 #include <libusb-1.0/libusb.h>
@@ -249,6 +250,11 @@ static int usb_read(struct transport *trans, void *buf, unsigned size)
 		if (rc != 0) {
 			return read_number;
 		}
+
+		if (bytes == 0) {
+			usleep(100000);
+		}
+
 		read_number += bytes;
 	}
 
