@@ -1,11 +1,9 @@
 #include <stdbool.h>
+#include <stdio.h>
 #include <stdint.h>
 #include <stddef.h>
-#include <unistd.h>
-#include <fcntl.h>
 #include <string.h>
 #include <errno.h>
-#include <sys/stat.h>
 
 #define OGF_VENDOR_CMD					0x3f
 #define HCI_VENDOR_CHANGE_BAUD			0x17
@@ -77,35 +75,36 @@ int rtlbt_change_baudrate(unsigned baudrate)
 
 int rtlbt_fw_download(const char *fw)
 {
-	int fd;
 	bool cmpl;
+	FILE *fd;
 	uint8_t rsp[2];
 	uint8_t buf[256];
 	uint8_t rz;
 	uint8_t off = 0;
 	uint32_t count = 0;
 	uint16_t opcode = cmd_opcode_pack(OGF_VENDOR_CMD, HCI_VENDOR_DOWNLOAD);
-	struct stat stbuf;
+	unsigned total;
 	int rs = -1;
 
-	if (-1 == stat(fw, &stbuf)) {
+
+	fd = fopen(fw, "rb");
+	if (fd == NULL) {
+		fprintf(stderr, "open %s: %s\n", fw, strerror(errno));
 		return -1;
 	}
 
-
-	fd = open(fw, O_RDONLY);
-	if (fd < 0) {
-		return -1;
-	}
+	fseek(fd, 0, SEEK_END);
+	total = ftell(fd);
+	fseek(fd, 0, SEEK_SET);
 
 	off = 0;
 	count = 0;
 	cmpl = false;
 	do {
-		rz = read(fd, buf + 1, 252);
+		rz = fread(buf + 1, 1, 252, fd);
 		buf[0] = off & 0x7f;
 		count += rz;
-		if (count == stbuf.st_size) {
+		if (count == total) {
 			cmpl = true;
 			//buf[0] |= 0x80;
 		}
@@ -120,6 +119,6 @@ int rtlbt_fw_download(const char *fw)
 
 	rs = 0;
 __quit:
-	close(fd);
+	fclose(fd);
 	return rs;
 }
