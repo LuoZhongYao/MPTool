@@ -1,25 +1,24 @@
 #include "defs.h"
-#include <stdlib.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <getopt.h>
-#include <string.h>
 #include <stdio.h>
-#include <unistd.h>
 #include <errno.h>
-#include <stdbool.h>
-#include <sys/stat.h>
+#include <stdlib.h>
+#include <string.h>
 #include "transport.h"
 #include <libusb-1.0/libusb.h>
 
-#define IAP_START_TIMEOUT		2000
-#define IAP_DATA_TIMEOUT		2000
-#define IAP_TRANSFER_TIMEOUT	2000
+#define USB_START_TIMEOUT		2000
+#define USB_WRITE_TIMEOUT		2000
+#define USB_READ_TIMEOUT		2000
+#define USB_TRANS_TIMEOUT		2000
 #define FLAG_AUTO_DETACH_KERNEL_DRIVER	0x0001
 
-#define MIN(a, b) ((a) < (b) ? (a) : (b))
+#define USB_TRANS_CMD_START			0x01
+#define USB_TRANS_CMD_SET_BAUDRATE	0x02
+#define USB_TRANS_CMD_WRITE			0x03
+#define USB_TRANS_CMD_READ			0x04
+#define USB_TRANS_CMD_FINISH		0x05
 
-#define TRANS_BLOCK_SIZE	59	
+#define TRANS_BLOCK_SIZE	60
 
 struct usb_transport {
 	int flags;
@@ -126,6 +125,7 @@ static int usb_write_command(libusb_device_handle *hndl, uint8_t cmd, const void
 {
 	int rc;
 	int trans_number;
+	int retry = 3;
 	uint8_t tmp[64];
 	uint8_t rsp[64];
 
@@ -135,26 +135,30 @@ static int usb_write_command(libusb_device_handle *hndl, uint8_t cmd, const void
 	tmp[1] = cmd;
 	tmp[2] = size;
 	memcpy(tmp + 3, param, size);
-	tmp[62] = checksum(tmp, 63);
+	tmp[63] = checksum(tmp, 63);
 
-	rc = libusb_interrupt_transfer(hndl, 2, tmp, 64, &trans_number, timeout);
+	rc = libusb_interrupt_transfer(hndl, 2, tmp, 64, &trans_number, USB_TRANS_TIMEOUT);
 
 	if (rc) {
 		return rc;
 	}
 
-	rc = libusb_interrupt_transfer(hndl, 0x81, rsp, 64, &trans_number, timeout);
-	if (rc != 0 && rc != LIBUSB_ERROR_TIMEOUT) {
-		return rc;
+	while (retry--) {
+		rc = libusb_interrupt_transfer(hndl, 0x81, rsp, 64, &trans_number, timeout);
+		if (rc != 0) {
+			return rc;
+		}
+
+		if (trans_number != 64 || rsp[0] != 0x01) {
+			return LIBUSB_ERROR_OTHER;
+		}
+
+		if (rsp[1] == 0 && rsp[2] == 2 && rsp[3] == cmd && rsp[4] == 0) {
+			return 0;
+		}
 	}
 
-	if (rc ==0 && trans_number == 64 && rsp[0] == 0x01 &&
-		rsp[1] == 0 && rsp[2] == 2 && rsp[3] == cmd && rsp[4] == 0) {
-
-		return 0;
-	}
-
-	return rc;
+	return LIBUSB_ERROR_TIMEOUT;
 }
 
 static int usb_read_block(libusb_device_handle *hndl, void *buf, unsigned size, unsigned *read_size, unsigned timeout)
@@ -168,13 +172,13 @@ static int usb_read_block(libusb_device_handle *hndl, void *buf, unsigned size, 
 
 	memset(tmp, 0, 64);
 	tmp[0] = 0x02;
-	tmp[1] = 0x04;
+	tmp[1] = USB_TRANS_CMD_READ;
 	tmp[2] = 1;
 	tmp[3] = size;
-	tmp[62] = checksum(tmp, 63);
+	tmp[63] = checksum(tmp, 63);
 
 	*read_size = 0;
-	rc = libusb_interrupt_transfer(hndl, 2, tmp, 64, &trans_number, timeout);
+	rc = libusb_interrupt_transfer(hndl, 2, tmp, 64, &trans_number, USB_TRANS_TIMEOUT);
 	if (rc != 0) {
 		return rc;
 	}
@@ -184,14 +188,14 @@ static int usb_read_block(libusb_device_handle *hndl, void *buf, unsigned size, 
 		return rc;
 	}
 
-	if (trans_number != 4 || tmp[0] != 0x01) {
+	if (trans_number != 64 || rsp[0] != 0x01) {
 		return LIBUSB_ERROR_OTHER;
 	}
 
-	sum = checksum(rsp, 63);
-	if (sum != rsp[63]) {
-		return LIBUSB_ERROR_OTHER + 0x01;
-	}
+	//sum = checksum(rsp, 63);
+	//if (sum != rsp[63]) {
+	//	return LIBUSB_ERROR_OTHER + 0x01;
+	//}
 
 	if (rsp[1] == 0x00 && rsp[2] == 2 && rsp[3] == 0x04) {
 		return LIBUSB_ERROR_OTHER + rsp[4];
@@ -220,7 +224,8 @@ static int usb_write(struct transport *trans, const void *buf, unsigned size)
 	while (write_number < size) {
 		unsigned count = MIN(size - write_number, TRANS_BLOCK_SIZE);
 
-		rc = usb_write_command(usb->hndl, 0x03, buf + write_number, count, 500);
+		rc = usb_write_command(usb->hndl, USB_TRANS_CMD_WRITE,
+			buf + write_number, count, USB_WRITE_TIMEOUT);
 		if (rc != 0) {
 			return write_number;
 		}
@@ -237,14 +242,14 @@ static int usb_read(struct transport *trans, void *buf, unsigned size)
 	struct usb_transport *usb = container_of(trans, struct usb_transport, transport);
 
 	while (read_number < size) {
+		unsigned bytes = 0;
 		unsigned count = MIN(size - read_number, TRANS_BLOCK_SIZE);
-		unsigned size = 0;
 
-		rc = usb_read_block(usb->hndl, buf + read_number, count, &size, 500);
+		rc = usb_read_block(usb->hndl, buf + read_number, count, &bytes, USB_READ_TIMEOUT);
 		if (rc != 0) {
 			return read_number;
 		}
-		read_number += size;
+		read_number += bytes;
 	}
 
 	return read_number;
@@ -253,6 +258,9 @@ static int usb_read(struct transport *trans, void *buf, unsigned size)
 static void usb_close(struct transport *trans)
 {
 	struct usb_transport *usb = container_of(trans, struct usb_transport, transport);
+
+	usb_write_command(usb->hndl, USB_TRANS_CMD_FINISH,
+		NULL, 0, USB_START_TIMEOUT);
 
 	if (usb->flags & FLAG_AUTO_DETACH_KERNEL_DRIVER) {
 		libusb_release_interface(usb->hndl, usb->iface);
@@ -268,7 +276,8 @@ static int usb_set_baudrate(struct transport *trans, unsigned speed)
 	uint32_t baudrate = speed;
 	struct usb_transport *usb = container_of(trans, struct usb_transport, transport);
 
-	return usb_write_command(usb->hndl, 0x02, &baudrate, 4, 500);
+	return usb_write_command(usb->hndl, USB_TRANS_CMD_SET_BAUDRATE,
+		&baudrate, 4, USB_WRITE_TIMEOUT);
 }
 
 static const struct transport_ops usb_transport_ops = {
@@ -298,7 +307,7 @@ struct transport *usb_transport_open(uint16_t vid, uint16_t pid, int iface, unsi
 	usb->iface = iface;
 	usb->transport.ops = &usb_transport_ops;
 
-	rc = usb_write_command(hndl, 0x01, &baudrate, 4, 500);
+	rc = usb_write_command(hndl, USB_TRANS_CMD_START, &baudrate, 4, USB_START_TIMEOUT);
 	if (rc != 0) {
 		fprintf(stderr, "start MP failure: %s\n", libusb_strerror(rc));
 		usb_close(&usb->transport);

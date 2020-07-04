@@ -19,5 +19,7 @@
         (type *)( (char *)__mptr - offsetof(type,member) );})
 #endif
 
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+
 #endif /* __DEFS_H__*/
 

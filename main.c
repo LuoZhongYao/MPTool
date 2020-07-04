@@ -73,7 +73,13 @@ int hci_read(void *buf, uint16_t size)
 		return -1;
 	}
 
-	if (3 != read_bytes(ev, 3))  {
+	do {
+		if (1 != read_bytes(ev, 1)) {
+			return -1;
+		}
+	} while (ev[0] != 0x04);
+
+	if (2 != read_bytes(ev + 1, 2))  {
 		return -1;
 	}
 
@@ -99,7 +105,8 @@ void hci_send_cmd(uint16_t opcode, const void *params, uint8_t size)
 		memcpy(hdr + 4, params, size);
 	}
 
-	transport_write(trans, hdr, 4 + size);
+	if ((4 + size) != transport_write(trans, hdr, 4 + size)) {
+	}
 }
 
 int hci_send_cmd_sync(uint16_t opcode, const void *params, uint8_t size,
@@ -212,12 +219,6 @@ int main(int argc, char **argv)
 			vid, pid, iface, strerror(errno));
 		exit(1);
 	}
-
-	//ufd = uart_open(tty, 115200);
-	//rtlbt_change_baudrate(speed);
-	//usleep(1000 * 1000);
-	//uart_set_baudrate(ufd, speed);
-	//usleep(1000 * 1000);
 
 	rtlbt_read_chip_type();
 

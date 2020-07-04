@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: 
  */
 
+#include "defs.h"
 #include "rtlmp.h"
 #include "rtlimg.h"
 #include <stdio.h>
@@ -38,12 +39,12 @@ static void parse_mp(struct mphdr *hdr, struct dwhdr *dw)
 static int do_download(FILE *fd, struct dwhdr *dw)
 {
 	int rs = -1;
-	uint8_t dat[4096];
+	uint8_t dat[2048];
 	uint16_t crc16;
 	uint32_t dwsz = 0;
 
 	while (dwsz < dw->dw_size) {
-		int rz = fread(dat, 1, sizeof(dat), fd);
+		int rz = fread(dat, 1, MIN(sizeof(dat), dw->dw_size - dwsz), fd);
 		if (rz <= 0)
 			break;
 
