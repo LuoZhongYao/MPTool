@@ -5,6 +5,7 @@
   <object class="GtkTextBuffer" id="output_text_buffer"/>
   <object class="GtkApplicationWindow" id="window">
     <property name="can_focus">False</property>
+    <property name="icon_name">start-here</property>
     <signal name="destroy" handler="gtk_main_quit" swapped="no"/>
     <child>
       <object class="GtkBox">

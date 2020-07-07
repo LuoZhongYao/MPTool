@@ -23,6 +23,7 @@
 *~
 *.release.mak
 compile_flags.txt
+compile_commands.json
 .vscode
 goods/
 depend/

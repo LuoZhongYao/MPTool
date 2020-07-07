@@ -1,13 +1,13 @@
 add_library(transport)
-if(WIN32)
+if(MINGW)
 	set(TRANSPORT_OS_LIBRARY hidapi)
-else(WIN32)
+else(MINGW)
 	set(TRANSPORT_OS_LIBRARY hidapi-hidraw)
 	set(TRANSPORT_OS_SOURCES
 		baudrate.c
 		serial_transport.c
 		)
-endif(WIN32)
+endif(MINGW)
 
 target_link_libraries(transport PRIVATE usb-1.0 ${TRANSPORT_OS_LIBRARY})
 target_include_directories(transport INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
@@ -18,4 +18,3 @@ target_sources(transport PRIVATE
 	usb_transport.c
 	mcu_transport.c
 	)
-
