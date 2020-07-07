@@ -20,6 +20,7 @@
 *.sym
 *.log
 *.swp
+*~
 *.release.mak
 compile_flags.txt
 .vscode
