@@ -49,7 +49,7 @@
               <object class="GtkLabel">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="label" translatable="yes">Transport</property>
+                <property name="label" translatable="yes">Transport: </property>
                 <property name="justify">right</property>
               </object>
               <packing>
@@ -76,6 +76,37 @@
                 <property name="position">3</property>
               </packing>
             </child>
+            <child>
+              <object class="GtkLabel">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="label" translatable="yes">Speed: </property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="padding">4</property>
+                <property name="position">4</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkComboBoxText" id="combo_box_speed">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="active">1</property>
+                <items>
+                  <item translatable="yes">115200</item>
+                  <item translatable="yes">921600</item>
+                  <item translatable="yes">1000000</item>
+                </items>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="padding">4</property>
+                <property name="position">5</property>
+              </packing>
+            </child>
           </object>
           <packing>
             <property name="expand">False</property>
@@ -90,7 +121,6 @@
             <property name="can_focus">False</property>
             <property name="margin_start">4</property>
             <property name="margin_end">4</property>
-            <property name="spacing">30</property>
             <child>
               <object class="GtkLabel">
                 <property name="visible">True</property>
@@ -98,8 +128,8 @@
                 <property name="label" translatable="yes">Vendor ID: </property>
               </object>
               <packing>
-                <property name="expand">True</property>
-                <property name="fill">True</property>
+                <property name="expand">False</property>
+                <property name="fill">False</property>
                 <property name="padding">4</property>
                 <property name="position">0</property>
               </packing>
@@ -109,11 +139,13 @@
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="text" translatable="yes">3285</property>
+                <property name="shadow_type">none</property>
+                <property name="caps_lock_warning">False</property>
                 <property name="input_purpose">number</property>
               </object>
               <packing>
-                <property name="expand">True</property>
-                <property name="fill">True</property>
+                <property name="expand">False</property>
+                <property name="fill">False</property>
                 <property name="padding">4</property>
                 <property name="position">1</property>
               </packing>
@@ -125,8 +157,8 @@
                 <property name="label" translatable="yes">Product ID: </property>
               </object>
               <packing>
-                <property name="expand">True</property>
-                <property name="fill">True</property>
+                <property name="expand">False</property>
+                <property name="fill">False</property>
                 <property name="padding">4</property>
                 <property name="position">2</property>
               </packing>
@@ -136,19 +168,20 @@
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="text" translatable="yes">0609</property>
-                <property name="input_purpose">number</property>
+                <property name="caps_lock_warning">False</property>
+                <property name="input_purpose">digits</property>
               </object>
               <packing>
-                <property name="expand">True</property>
-                <property name="fill">True</property>
+                <property name="expand">False</property>
+                <property name="fill">False</property>
                 <property name="padding">4</property>
                 <property name="position">3</property>
               </packing>
             </child>
           </object>
           <packing>
-            <property name="expand">True</property>
-            <property name="fill">True</property>
+            <property name="expand">False</property>
+            <property name="fill">False</property>
             <property name="padding">4</property>
             <property name="position">1</property>
           </packing>
@@ -202,7 +235,7 @@
             <property name="visible">True</property>
             <property name="can_focus">False</property>
             <property name="label_xalign">0.5</property>
-            <property name="label_yalign">0.25</property>
+            <property name="label_yalign">0.25999999046325684</property>
             <property name="shadow_type">in</property>
             <child>
               <object class="GtkAlignment">

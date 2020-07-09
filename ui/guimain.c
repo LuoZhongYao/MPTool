@@ -16,13 +16,15 @@
 
 static GtkButton *update_button;
 static GtkEntry *entry_vid, *entry_pid;
-static GtkComboBox *combo_box_transport;
+static GtkComboBoxText *combox_transport;
+static GtkComboBoxText *combox_speed;
 static GtkTextBuffer *output_text_buffer;
 static GtkFileChooser *chooser;
 static GtkProgressBar *update_progress_bar;
 static gchar *firmware = "MP_LBA1127_BLE_v1.1.2.bin";
 static union transport_param trans_param;
 static const char *trans_name;
+static int trans_speed = 115200;
 static int progress = -1;
 
 static int output_handler(void *buf)
@@ -79,7 +81,7 @@ static void *update_handler(void *arg)
 	progress = 0;
 
 	g_idle_add(progress_handler, NULL);
-	rc = rtlmptool_download_firmware(transport, 115200,
+	rc = rtlmptool_download_firmware(transport, trans_speed,
 		"image/firmware0.bin", firmware, &progress);
 	transport_close(transport);
 
@@ -102,7 +104,8 @@ void on_update_btn_clicked(void)
 
 	vid = strtol(gtk_entry_get_text(entry_vid), NULL, 16);
 	pid = strtol(gtk_entry_get_text(entry_pid), NULL, 16);
-	trans_name = gtk_combo_box_get_active_id(combo_box_transport);
+	trans_name = gtk_combo_box_get_active_id(GTK_COMBO_BOX(combox_transport));
+	trans_speed = strtol(gtk_combo_box_text_get_active_text(combox_speed), NULL, 0);
 
 	gtk_progress_bar_set_fraction(update_progress_bar, 0.0);
 	if (!strcmp(trans_name, TRANSPORT_IFACE_LIBUSB)) {
@@ -147,13 +150,14 @@ int main(int argc, char **argv)
 	entry_pid = GTK_ENTRY(gtk_builder_get_object(builder, "entry_pid"));
 	chooser = GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "firmware_chooser"));
 	output_text_buffer = GTK_TEXT_BUFFER(gtk_builder_get_object(builder, "output_text_buffer"));
-	combo_box_transport = GTK_COMBO_BOX(gtk_builder_get_object(builder, "combo_box_transport"));
+	combox_transport = GTK_COMBO_BOX_TEXT(gtk_builder_get_object(builder, "combo_box_transport"));
+	combox_speed = GTK_COMBO_BOX_TEXT(gtk_builder_get_object(builder, "combo_box_speed"));
 	update_progress_bar = GTK_PROGRESS_BAR(gtk_builder_get_object(builder, "update_progress_bar"));
 	update_button = GTK_BUTTON(gtk_builder_get_object(builder, "update_button"));
 
-	assert(entry_pid && entry_vid);
-	assert(combo_box_transport);
 	assert(output_text_buffer);
+	assert(entry_pid && entry_vid);
+	assert(combox_speed && combox_transport);
 
 	window = GTK_APPLICATION_WINDOW(gtk_builder_get_object(builder, "window"));
 	gtk_widget_show_all(GTK_WIDGET(window));
