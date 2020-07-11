@@ -13,8 +13,9 @@ extern "C" {
 
 struct transport;
 struct transport *mcu_transport_open(void *hndl,
-	int (*read)(void *hndl, unsigned char id, void *buf, unsigned size),
-	int (*write)(void *hndl, unsigned char id, const void *buf, unsigned size));
+		void (*close)(void *hndl),
+		int (*read)(void *hndl, unsigned char id, void *buf, unsigned size),
+		int (*write)(void *hndl, unsigned char id, const void *buf, unsigned size));
 
 #ifdef __cplusplus
 }

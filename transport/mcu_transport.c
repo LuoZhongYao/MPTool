@@ -1,4 +1,5 @@
 #include "defs.h"
+#include <unistd.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <errno.h>
@@ -23,8 +24,9 @@
 
 struct mcu_transport {
 	void *hndl;
-	int (*read)(void *handle, unsigned char id, void *buf, unsigned size);
-	int (*write)(void *handle, unsigned char id, const void *buf, unsigned size);
+	void (*close)(void *hndl);
+	int (*read)(void *hndl, unsigned char id, void *buf, unsigned size);
+	int (*write)(void *hndl, unsigned char id, const void *buf, unsigned size);
 	struct transport transport;
 };
 
@@ -51,13 +53,13 @@ static int mcu_write_command(struct mcu_transport *trans, uint8_t cmd, const voi
 
 	memset(tmp, 0, 64);
 
-	tmp[0] = 0x02;
+	tmp[0] = 0x03;
 	tmp[1] = cmd;
 	tmp[2] = size;
 	memcpy(tmp + 3, param, size);
 	tmp[63] = checksum(tmp, 63);
 
-	rc = trans->write(trans->hndl, 2, tmp, 64);
+	rc = trans->write(trans->hndl, 0x02, tmp, 64);
 
 	if (rc <= 0) {
 		return rc;
@@ -90,7 +92,7 @@ static int mcu_read_block(struct mcu_transport *trans, void *buf, unsigned size,
 	uint8_t rsp[64];
 
 	memset(tmp, 0, 64);
-	tmp[0] = 0x02;
+	tmp[0] = 0x03;
 	tmp[1] = USB_TRANS_CMD_READ;
 	tmp[2] = 1;
 	tmp[3] = size;
@@ -170,7 +172,7 @@ static int mcu_read(struct transport *trans, void *buf, unsigned size)
 		}
 
 		if (bytes == 0) {
-			usleep(100);
+			usleep(1000);
 		}
 
 		read_number += bytes;
@@ -185,6 +187,9 @@ static void mcu_close(struct transport *trans)
 
 	mcu_write_command(mcu, USB_TRANS_CMD_FINISH,
 		NULL, 0, USB_START_TIMEOUT);
+	if (mcu->close) {
+		mcu->close(mcu->hndl);
+	}
 
 	free(mcu);
 }
@@ -206,6 +211,7 @@ static const struct transport_ops mcu_transport_ops = {
 };
 
 struct transport *mcu_transport_open(void *hndl,
+	void (*close)(void *hndl),
 	int (*read)(void *hndl, unsigned char id, void *buf, unsigned size),
 	int (*write)(void *hndl, unsigned char id, const void *buf, unsigned size))
 {
@@ -217,6 +223,7 @@ struct transport *mcu_transport_open(void *hndl,
 	mcu->hndl = hndl;
 	mcu->read = read;
 	mcu->write = write;
+	mcu->close = close;
 	mcu->transport.ops = &mcu_transport_ops;
 
 	rc = mcu_write_command(mcu, USB_TRANS_CMD_START, &baudrate, 4, USB_START_TIMEOUT);

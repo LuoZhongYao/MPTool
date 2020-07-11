@@ -21,6 +21,12 @@ static int hidapi_write(void *hndl, unsigned char id, const void *buf, unsigned 
 	return hid_write(hndl, buf, size);
 }
 
+static void hidapi_close(void *hndl)
+{
+	hid_close(hndl);
+	hid_exit();
+}
+
 struct transport *hidapi_transport_open(uint16_t vid, uint16_t pid)
 {
 	int rc;
@@ -31,8 +37,9 @@ struct transport *hidapi_transport_open(uint16_t vid, uint16_t pid)
 	dev = hid_open(vid, pid, NULL);
 	if (dev == NULL) {
 		fprintf(stderr, "hid open %04x:%04x: %s\n", vid, pid, strerror(errno));
+		hid_exit();
 		return NULL;
 	}
 
-	return mcu_transport_open(dev, hidapi_read, hidapi_write);
+	return mcu_transport_open(dev, hidapi_close, hidapi_read, hidapi_write);
 }
