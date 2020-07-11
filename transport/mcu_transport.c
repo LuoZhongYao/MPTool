@@ -47,7 +47,7 @@ static int mcu_write_command(struct mcu_transport *trans, uint8_t cmd, const voi
 {
 	int rc;
 	int trans_number;
-	int retry = 3;
+	int retry = 10;
 	uint8_t tmp[64];
 	uint8_t rsp[64];
 

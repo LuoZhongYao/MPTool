@@ -40,10 +40,21 @@ static int hotplug_arrived_callback(libusb_context *ctx, libusb_device *dev,
 
 static int usb_init(int usb_log_level)
 {
+	int rc;
 	libusb_init(NULL);
 
+#if defined(__WIN32__)
+	rc = libusb_set_option(NULL, LIBUSB_OPTION_USE_USBDK);
+	if (rc != LIBUSB_SUCCESS) {
+		fprintf(stderr, "libusb_set_option(LIBUSB_OPTION_USE_USBDK): %s\n", libusb_strerror(rc));
+	}
+#endif
+
 	if (usb_log_level >= LIBUSB_LOG_LEVEL_NONE && usb_log_level <= LIBUSB_LOG_LEVEL_DEBUG) {
-		libusb_set_option(NULL, LIBUSB_OPTION_LOG_LEVEL, usb_log_level);
+		rc = libusb_set_option(NULL, LIBUSB_OPTION_LOG_LEVEL, usb_log_level);
+		if (rc != LIBUSB_SUCCESS) {
+			fprintf(stderr, "libusb_set_option(LIBUSB_OPTION_LOG_LEVEL): %s\n", libusb_strerror(rc));
+		}
 	}
 
 	return 0;
@@ -134,7 +145,7 @@ struct transport *usb_transport_open(uint16_t vid, uint16_t pid, int iface, unsi
 	libusb_device_handle *hndl;
 	struct usb_context *usb;
 
-	usb_init(LIBUSB_LOG_LEVEL_DEBUG);
+	usb_init(LIBUSB_LOG_LEVEL_NONE);
 	hndl = usb_open_timeout(vid, pid, iface, 10 * 1000, &rc, flags);
 	if (hndl == NULL) {
 		libusb_exit(NULL);
