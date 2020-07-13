@@ -1,12 +1,10 @@
 add_library(transport)
 if(MINGW)
 	set(TRANSPORT_OS_LIBRARY hidapi)
+	set(TRANSPORT_OS_SOURCES com_transport.c)
 else(MINGW)
 	set(TRANSPORT_OS_LIBRARY hidapi-hidraw)
-	set(TRANSPORT_OS_SOURCES
-		baudrate.c
-		serial_transport.c
-		)
+	set(TRANSPORT_OS_SOURCES baudrate.c serial_transport.c)
 endif(MINGW)
 
 target_link_libraries(transport PRIVATE usb-1.0 ${TRANSPORT_OS_LIBRARY})

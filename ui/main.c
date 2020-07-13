@@ -9,9 +9,7 @@
 
 struct transport *trans;
 struct transport *hidapi_transport_open(uint16_t vid, uint16_t pid);
-#if !defined(__WIN32)
 struct transport *serial_transport_open(const char *dev, unsigned speed);
-#endif
 struct transport *usb_transport_open(uint16_t vid, uint16_t pid, int iface, unsigned flags);
 
 #define TRANS_IFACE_NONE	0x00
@@ -70,9 +68,7 @@ int main(int argc, char **argv)
 	switch (trans_iface) {
 	case TRANS_IFACE_NONE:
 	case TRANS_IFACE_SERIAL:
-#if !defined(__WIN32)
 		trans = serial_transport_open(tty, 115200);
-#endif
 	break;
 
 	case TRANS_IFACE_USB:
@@ -91,6 +87,9 @@ int main(int argc, char **argv)
 	}
 
 	rc = rtlmptool_download_firmware(trans, speed, fw, mp, NULL);
+	if (rc != 0) {
+		fprintf(stderr, "donwload firmware failure: %s\n", strerror(errno));
+	}
 	transport_close(trans);
 
 	return rc;

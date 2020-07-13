@@ -67,7 +67,9 @@
                 <items>
                   <item id="hidapi" translatable="yes">HID API</item>
                   <item id="libusb" translatable="yes">LIBUSB</item>
+                  <item id="serial" translatable="yes">Serial</item>
                 </items>
+                <signal name="changed" handler="on_combo_box_transport_changed" swapped="no"/>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -116,7 +118,7 @@
           </packing>
         </child>
         <child>
-          <object class="GtkBox">
+          <object class="GtkBox" id="usb_box">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
             <property name="margin_start">4</property>
@@ -187,6 +189,40 @@
           </packing>
         </child>
         <child>
+          <object class="GtkBox" id="com_box">
+            <property name="can_focus">False</property>
+            <child>
+              <object class="GtkLabel">
+                <property name="can_focus">False</property>
+                <property name="label" translatable="yes">COM: </property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="padding">4</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkEntry" id="entry_com">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="text" translatable="yes">COM0</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">1</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="position">2</property>
+          </packing>
+        </child>
+        <child>
           <object class="GtkBox">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
@@ -225,7 +261,7 @@
           <packing>
             <property name="expand">False</property>
             <property name="fill">True</property>
-            <property name="position">2</property>
+            <property name="position">3</property>
           </packing>
         </child>
         <child>
@@ -271,7 +307,7 @@
             <property name="expand">True</property>
             <property name="fill">True</property>
             <property name="padding">4</property>
-            <property name="position">3</property>
+            <property name="position">4</property>
           </packing>
         </child>
       </object>

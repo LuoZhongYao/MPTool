@@ -158,6 +158,7 @@ int rtlmptool_download_firmware(void *trns, int speed,
 
 	fpw = fopen(fw, "rb");
 	if (fpw == NULL) {
+		fprintf(stderr, "%s: %s\n", fw, strerror(errno));
 		return -1;
 	}
 
@@ -165,6 +166,7 @@ int rtlmptool_download_firmware(void *trns, int speed,
 
 	fpm = fopen(mp, "rb");
 	if (fpm == NULL) {
+		fprintf(stderr, "%s: %s\n", mp, strerror(errno));
 		fclose(fpw);
 		return -1;
 	}

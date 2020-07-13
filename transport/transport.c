@@ -24,11 +24,9 @@ struct transport *transport_open(const char *transport_name, union transport_par
 			param->libusb.iface, param->libusb.flags);
 	}
 
-#if !defined(__WIN32)
 	if (!strcmp(transport_name, TRANSPORT_IFACE_SERAIL)) {
 		return serial_transport_open(param->serial.tty, param->serial.speed);
 	}
-#endif
 
 	return NULL;
 }
