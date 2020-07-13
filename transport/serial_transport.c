@@ -114,7 +114,7 @@ static int uart_open(const char *dev, int speed)
 	return fd;
 }
 
-static void uart_set_baudrate(int fd, unsigned speed)
+static int uart_set_baudrate(int fd, unsigned speed)
 {
 	speed_t baudrate;
 	struct termios ti;
@@ -128,16 +128,18 @@ static void uart_set_baudrate(int fd, unsigned speed)
 
 	if (tcsetattr(fd, TCSANOW, &ti) < 0) {
 		perror("set port settings");
-		exit(1);
+		return -1;
 	}
 
 	tcflush(fd, TCIOFLUSH);
 	if (baudrate == -1) {
 		if (set_baudrate(fd, speed)) {
 			perror("set baudrate");
-			exit(1);
+			return -1;
 		}
 	}
+
+	return 0;
 }
 
 static int serial_write(struct transport *trans, const void *buf, unsigned size)
@@ -166,7 +168,7 @@ static int serial_set_baudrate(struct transport *trans, unsigned speed)
 {
 	struct serial_transport *ser = container_of(trans, struct serial_transport, transport);
 
-	return set_baudrate(ser->fd, speed);
+	return uart_set_baudrate(ser->fd, speed);
 }
 
 static const struct transport_ops serial_transport_ops = {
