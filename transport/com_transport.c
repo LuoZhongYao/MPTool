@@ -77,6 +77,7 @@ struct transport *serial_transport_open(const char *dev, unsigned speed)
 		OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 
 	if (hndl == INVALID_HANDLE_VALUE) {
+		errno = ENODEV;
 		return NULL;
 	}
 
@@ -89,6 +90,7 @@ struct transport *serial_transport_open(const char *dev, unsigned speed)
 	dcb.BaudRate = speed;
 	if (!SetCommState(hndl, &dcb)) {
 		CloseHandle(hndl);
+		errno = EINVAL;
 		return NULL;
 	}
 

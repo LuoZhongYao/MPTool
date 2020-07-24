@@ -81,8 +81,8 @@ int main(int argc, char **argv)
 	}
 
 	if(trans == NULL) {
-		fprintf(stderr, "can't open transport interfaces VID:%04x, PID:%04x, IFACE:%d %s\n",
-			vid, pid, iface, strerror(errno));
+		fprintf(stderr, "Transport interface (%04x:%04x,%d) or (%s) %s\n",
+			vid, pid, iface, tty, strerror(errno));
 		exit(1);
 	}
 

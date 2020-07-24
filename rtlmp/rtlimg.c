@@ -193,6 +193,7 @@ int rtlimg_download(FILE *fd, int total, int dwsized, int *progress)
 			printf("Download: %x, %x\n", dw.dw_addr, dw.dw_size);
 			if (do_download(fd, &dw, total, &dwsized, progress)) {
 				fprintf(stderr, "Download failure: offset = %x, addresss %x\n", off, sub[i].downloadAddr);
+				return -1;
 			}
 		}
 

@@ -69,6 +69,7 @@ static libusb_device_handle *usb_open_timeout(uint16_t vid, uint16_t pid,
 
 	*res = 0;
 	hndl = libusb_open_device_with_vid_pid(NULL, vid, pid);
+#if !defined (__WIN32)
 	if (hndl == NULL) {
 		tv.tv_sec = ms / 1000;
 		tv.tv_usec = (ms % 1000) * 1000;
@@ -82,6 +83,7 @@ static libusb_device_handle *usb_open_timeout(uint16_t vid, uint16_t pid,
 		*res = libusb_handle_events_timeout(NULL, &tv);
 		libusb_hotplug_deregister_callback(NULL, cb);
 	}
+#endif
 
 	if (hndl != NULL) {
 		if (flags & FLAG_AUTO_DETACH_KERNEL_DRIVER) {

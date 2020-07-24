@@ -38,8 +38,8 @@ static int read_bytes(void *buf, uint16_t size)
 
 	for (reqsz = 0; reqsz < size; ) {
 		int rz = transport_read(trans, buf + reqsz, size - reqsz);
-		if (rz < 0) {
-			return -1;
+		if (rz <= 0) {
+			return reqsz;
 		}
 		reqsz += rz;
 	}
@@ -100,6 +100,9 @@ int hci_send_cmd_sync(uint16_t opcode, const void *params, uint8_t size,
 
 	do {
 		sz = hci_read(ev, rsp_size + 6);
+		if (sz < 0) {
+			return -1;
+		}
 		//printf("sz: %d, %02x %02x %02x %02x %02x %02x\n", sz, ev[0], ev[1], ev[2], ev[3], ev[4], ev[5]);
 	} while (ev[0] != 0x04 || ev[1] != 0x0e || opcode != (ev[4] | ev[5] << 8));
 
@@ -158,7 +161,6 @@ int rtlmptool_download_firmware(void *trns, int speed,
 
 	fpw = fopen(fw, "rb");
 	if (fpw == NULL) {
-		fprintf(stderr, "%s: %s\n", fw, strerror(errno));
 		return -1;
 	}
 
@@ -166,7 +168,6 @@ int rtlmptool_download_firmware(void *trns, int speed,
 
 	fpm = fopen(mp, "rb");
 	if (fpm == NULL) {
-		fprintf(stderr, "%s: %s\n", mp, strerror(errno));
 		fclose(fpw);
 		return -1;
 	}
@@ -181,21 +182,23 @@ int rtlmptool_download_firmware(void *trns, int speed,
 	rtlbt_vendor_cmd62((uint8_t[]){0x20, 0xa8, 0x02, 0x00, 0x40,
 		0x04, 0x02, 0x00, 0x01});
 
-	rtlbt_fw_download(fpw, fw_size + mp_size, 0, progress);
+	rc =rtlbt_fw_download(fpw, fw_size + mp_size, 0, progress);
+	if (rc != 0) {
+		goto _quit;
+	}
+
 	rtlbt_vendor_cmd62((uint8_t[]){0x20, 0x34, 0x12, 0x20, 0x00,
 		0x31, 0x38, 0x20, 0x00});
 
 	rtlmp_read_x00();
 	rc = rtlmp_change_baudrate(speed);
 	if (rc != 0) {
-		fprintf(stderr, "change baudrate %d failure, rc = %d\n", speed, rc);
 		goto _quit;
 	}
 
 	transport_set_baudrate(trans, speed);
 	rc = rtlimg_download(fpm, fw_size + mp_size, fw_size, progress);
 	if (rc != 0) {
-		fprintf(stderr, "rtlimg download failure, rc = %d\n", rc);
 		goto _quit;
 	}
 	rtlmp_reset(0x01);
