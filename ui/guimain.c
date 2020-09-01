@@ -271,6 +271,7 @@ int main(int argc, char **argv)
 	window = GTK_APPLICATION_WINDOW(gtk_builder_get_object(builder, "window"));
 	gtk_widget_show_all(GTK_WIDGET(window));
 	gtk_widget_hide(GTK_WIDGET(com_box));
+	gtk_widget_hide(GTK_WIDGET(factory_box));
 
 	gtk_main();
 

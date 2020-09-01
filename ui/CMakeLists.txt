@@ -22,4 +22,4 @@ endif(MINGW)
 
 target_link_libraries(MPToolGui PRIVATE rtlmp transport ${GTK3_STATIC_LIBRARIES})
 target_include_directories(MPToolGui PRIVATE ${GTK3_INCLUDE_DIRS})
-# target_link_options(MPToolGui PRIVATE -Wl,-subsystem,windows)
+target_link_options(MPToolGui PRIVATE -Wl,-subsystem,windows)

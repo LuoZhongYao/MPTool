@@ -35,11 +35,18 @@ static struct transport *trans;
 static int read_bytes(void *buf, uint16_t size)
 {
 	int reqsz;
+	int retry = 3;
 
 	for (reqsz = 0; reqsz < size; ) {
 		int rz = transport_read(trans, buf + reqsz, size - reqsz);
-		if (rz <= 0) {
-			return reqsz;
+		if (rz < 0) {
+			return -1;
+		}
+
+		if (rz == 0) {
+			if (retry-- == 0) {
+				return reqsz;
+			}
 		}
 		reqsz += rz;
 	}
@@ -145,10 +152,18 @@ int rtlmp_send_sync(const void *mp, uint32_t size, void *rsp, uint32_t rsp_size)
 	return rtlmp_read(rsp, rsp_size) ? 0 : -1;
 }
 
-static void rtlmp_read_x00(void)
+static int rtlmp_read_x00(void)
 {
+	int rc;
 	uint8_t buf[70];
-	read_bytes(buf, sizeof(buf));
+	rc = read_bytes(buf, sizeof(buf));
+	if (rc != sizeof(buf)) {
+		printf( "> %d\n", rc);
+		errno = EIO;
+		return -1;
+	}
+
+	return 0;
 }
 
 void rtlmptoo_set_tranport(void *trns)
@@ -195,7 +210,11 @@ int rtlmptool_download_firmware(void *trns, int speed,
 	rtlbt_vendor_cmd62((uint8_t[]){0x20, 0x34, 0x12, 0x20, 0x00,
 		0x31, 0x38, 0x20, 0x00});
 
-	rtlmp_read_x00();
+	rc = rtlmp_read_x00();
+	if (rc != 0) {
+		goto _quit;
+	}
+
 	rc = rtlmp_change_baudrate(speed);
 	if (rc != 0) {
 		goto _quit;
