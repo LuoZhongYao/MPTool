@@ -36,7 +36,7 @@ struct transport *hidapi_transport_open(uint16_t vid, uint16_t pid)
 
 	dev = hid_open(vid, pid, NULL);
 	if (dev == NULL) {
-		fprintf(stderr, "hid open %04x:%04x: %s\n", vid, pid, strerror(errno));
+		errno = ENODEV;
 		hid_exit();
 		return NULL;
 	}

@@ -10,6 +10,7 @@
 
 #include <stdio.h>
 
+int rtlbt_single_tone(unsigned char ch);
 int rtlbt_cacl_download_size(FILE *fd);
 int rtlbt_change_baudrate(unsigned baudrate);
 int rtlbt_vendor_cmd62(const unsigned char dat[9]);

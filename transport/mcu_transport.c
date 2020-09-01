@@ -159,7 +159,7 @@ static int mcu_write(struct transport *trans, const void *buf, unsigned size)
 static int mcu_read(struct transport *trans, void *buf, unsigned size)
 {
 	int rc;
-	int retry = 3000;
+	int retry = 300;
 	unsigned read_number = 0;
 	struct mcu_transport *mcu = container_of(trans, struct mcu_transport, transport);
 
@@ -174,6 +174,7 @@ static int mcu_read(struct transport *trans, void *buf, unsigned size)
 
 		if (bytes == 0) {
 			if (retry-- <= 0) {
+				errno = ETIMEDOUT;
 				return read_number;
 			}
 

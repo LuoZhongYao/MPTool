@@ -12,6 +12,7 @@
 #define HCI_VENDOR_x62					0x62
 #define HCI_VENDOR_READ_ROM_VER			0x6d
 #define HCI_VENDOR_READ_EVERSION		0x6f
+#define HCI_VENDOR_SINGLE_TONE			0x78
 #define HCI_VENDOR_WRITE_FREQ_OFFSET	0xea
 
 #define cmd_opcode_pack(ogf, ocf)	(uint16_t)((ocf & 0x03ff)|(ogf << 10))
@@ -47,6 +48,18 @@ int rtlbt_read_chip_type(void)
 	const uint8_t params[5] = {0x20, 0xa8, 0x02, 0x00, 0x40};
 	return hci_send_cmd_sync(cmd_opcode_pack(OGF_VENDOR_CMD, HCI_VENDOR_READ_CHIP_TYPE),
 		params, sizeof(params), rsp, 5);
+}
+
+int rtlbt_single_tone(unsigned char ch)
+{
+	int res;
+	uint8_t rsp;
+	const uint8_t params[4] = {0x01, 0x00, ch, 0x01};
+
+	res = hci_send_cmd_sync(cmd_opcode_pack(OGF_VENDOR_CMD, HCI_VENDOR_SINGLE_TONE),
+		params, sizeof(params), &rsp, 1);
+
+	return res ? res : rsp;
 }
 
 int rtlbt_vendor_cmd62(const unsigned char dat[9])

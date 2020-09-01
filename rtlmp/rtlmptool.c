@@ -94,7 +94,7 @@ void hci_send_cmd(uint16_t opcode, const void *params, uint8_t size)
 int hci_send_cmd_sync(uint16_t opcode, const void *params, uint8_t size,
 	void *rsp, uint16_t rsp_size)
 {
-	uint16_t sz;
+	int sz;
 	uint8_t ev[256 + 3];
 	hci_send_cmd(opcode, params, size);
 
@@ -151,6 +151,11 @@ static void rtlmp_read_x00(void)
 	read_bytes(buf, sizeof(buf));
 }
 
+void rtlmptoo_set_tranport(void *trns)
+{
+	trans = trns;
+}
+
 int rtlmptool_download_firmware(void *trns, int speed,
 	const char *fw, const char *mp, int *progress)
 {
@@ -182,7 +187,7 @@ int rtlmptool_download_firmware(void *trns, int speed,
 	rtlbt_vendor_cmd62((uint8_t[]){0x20, 0xa8, 0x02, 0x00, 0x40,
 		0x04, 0x02, 0x00, 0x01});
 
-	rc =rtlbt_fw_download(fpw, fw_size + mp_size, 0, progress);
+	rc = rtlbt_fw_download(fpw, fw_size + mp_size, 0, progress);
 	if (rc != 0) {
 		goto _quit;
 	}
