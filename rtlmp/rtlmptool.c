@@ -32,6 +32,7 @@
 #define HCI_MAX_FRAME_SIZE  (HCI_MAX_ACL_SIZE + 4)
 
 static struct transport *trans;
+int usleep(unsigned int usec);
 static int read_bytes(void *buf, uint16_t size)
 {
 	int reqsz;
@@ -221,6 +222,7 @@ int rtlmptool_download_firmware(void *trns, int speed,
 	}
 
 	transport_set_baudrate(trans, speed);
+	usleep(10000);
 	rc = rtlimg_download(fpm, fw_size + mp_size, fw_size, progress);
 	if (rc != 0) {
 		goto _quit;

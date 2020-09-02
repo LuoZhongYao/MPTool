@@ -234,7 +234,7 @@ struct transport *mcu_transport_open(void *hndl,
 
 	rc = mcu_write_command(mcu, USB_TRANS_CMD_START, &baudrate, 4, USB_START_TIMEOUT);
 	if (rc != 0) {
-		fprintf(stderr, "start MP failure: %s\n", strerror(errno));
+		printf("start MP failure: %s\n", strerror(errno));
 		mcu_close(&mcu->transport);
 		return NULL;
 	}

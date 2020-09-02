@@ -45,7 +45,7 @@ static speed_t tty_get_speed(int speed)
 		_(3500000); break;
 		_(4000000); break;
 	default:
-		fprintf(stderr, "Not support %d\n", speed);
+		printf("Not support %d\n", speed);
 	break;
 	}
 #undef _

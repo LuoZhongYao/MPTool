@@ -46,14 +46,14 @@ static int usb_init(int usb_log_level)
 #if defined(__WIN32__)
 	rc = libusb_set_option(NULL, LIBUSB_OPTION_USE_USBDK);
 	if (rc != LIBUSB_SUCCESS) {
-		fprintf(stderr, "libusb_set_option(LIBUSB_OPTION_USE_USBDK): %s\n", libusb_strerror(rc));
+		printf("libusb_set_option(LIBUSB_OPTION_USE_USBDK): %s\n", libusb_strerror(rc));
 	}
 #endif
 
 	if (usb_log_level >= LIBUSB_LOG_LEVEL_NONE && usb_log_level <= LIBUSB_LOG_LEVEL_DEBUG) {
 		rc = libusb_set_option(NULL, LIBUSB_OPTION_LOG_LEVEL, usb_log_level);
 		if (rc != LIBUSB_SUCCESS) {
-			fprintf(stderr, "libusb_set_option(LIBUSB_OPTION_LOG_LEVEL): %s\n", libusb_strerror(rc));
+			printf("libusb_set_option(LIBUSB_OPTION_LOG_LEVEL): %s\n", libusb_strerror(rc));
 		}
 	}
 
@@ -120,7 +120,7 @@ static int usb_write(void *hndl, unsigned char id, const void *buf, unsigned siz
 
 	rc = libusb_interrupt_transfer(usb->hndl, id, (void*)buf, size, &trans_number, USB_TRANS_TIMEOUT);
 	if (rc != 0) {
-		fprintf(stderr, "libusb_write: %s\n", libusb_strerror(rc));
+		printf("libusb_write: %s\n", libusb_strerror(rc));
 		return -1;
 	}
 

@@ -19,7 +19,7 @@ struct transport *usb_transport_open(uint16_t vid, uint16_t pid, int iface, unsi
 
 #define check_and_set_trans_iface(trans_iface, iface)	do {								\
 	if (trans_iface != TRANS_IFACE_NONE && trans_iface != iface) {							\
-		fprintf(stderr, "can't set multiple transmission interfaces at the same time\n");	\
+		printf("can't set multiple transmission interfaces at the same time\n");	\
 		usage(1);																			\
 	}																						\
 	trans_iface = iface;																	\
@@ -81,14 +81,14 @@ int main(int argc, char **argv)
 	}
 
 	if(trans == NULL) {
-		fprintf(stderr, "Transport interface (%04x:%04x,%d) or (%s) %s\n",
+		printf("Transport interface (%04x:%04x,%d) or (%s) %s\n",
 			vid, pid, iface, tty, strerror(errno));
 		exit(1);
 	}
 
 	rc = rtlmptool_download_firmware(trans, speed, fw, mp, NULL);
 	if (rc != 0) {
-		fprintf(stderr, "donwload firmware failure: %s\n", strerror(errno));
+		printf("donwload firmware failure: %s\n", strerror(errno));
 	}
 	transport_close(trans);
 

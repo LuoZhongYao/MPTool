@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2020 ZhongYao Luo <luozhongyao@gmail.com>
- * 
- * SPDX-License-Identifier: 
+ *
+ * SPDX-License-Identifier:
  */
 
 #include <assert.h>
@@ -60,17 +60,21 @@ static int update_button_sensitive(void *arg)
 	return 0;
 }
 
-void gtk_text_printf(const char *fmt, ...)
+int gtk_text_printf(const char *fmt, ...)
 {
+	int rc;
 	va_list va;
 	char *buf = malloc(1024);
 
 	va_start(va, fmt);
-	vsnprintf(buf, 1024, fmt, va);	
+	rc = vsnprintf(buf, 1024, fmt, va);
 	va_end(va);
 
 	g_idle_add(output_handler, buf);
+
+	return rc;
 }
+int __wrap_printf(const char *fmt, ...) __attribute__((alias("gtk_text_printf")));
 
 static void *update_handler(void *arg)
 {
@@ -93,7 +97,7 @@ static void *update_handler(void *arg)
 	if (rc != 0) {
 		gtk_text_printf("Update %s failure: %s\n", firmware, strerror(errno));
 	} else {
-		gtk_text_printf("Update Finish\n");		
+		gtk_text_printf("Update Finish\n");
 	}
 
 	progress = -1;
@@ -199,7 +203,7 @@ void on_combo_box_transport_changed(void)
 	if (!strcmp(trans_name, TRANSPORT_IFACE_SERAIL)) {
 		gtk_widget_hide(GTK_WIDGET(usb_box));
 		gtk_widget_show(GTK_WIDGET(com_box));
-	} else {               
+	} else {
 		gtk_widget_hide(GTK_WIDGET(com_box));
 		gtk_widget_show(GTK_WIDGET(usb_box));
 	}
