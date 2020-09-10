@@ -4,6 +4,7 @@
  * SPDX-License-Identifier:
  */
 
+#include <time.h>
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -79,6 +80,7 @@ int __wrap_printf(const char *fmt, ...) __attribute__((alias("gtk_text_printf"))
 static void *update_handler(void *arg)
 {
 	int rc;
+	clock_t start = clock(), cost;
 	struct transport *transport;
 
 	transport = transport_open(trans_name, &trans_param);
@@ -94,10 +96,12 @@ static void *update_handler(void *arg)
 		"image/firmware0.bin", firmware, &progress);
 	transport_close(transport);
 
+	cost = (clock() - start) / CLOCKS_PER_SEC;
 	if (rc != 0) {
-		gtk_text_printf("Update %s failure: %s\n", firmware, strerror(errno));
+		gtk_text_printf("Update %s failure: %s, time cost: %d seconds\n",
+			firmware, strerror(errno), cost);
 	} else {
-		gtk_text_printf("Update Finish\n");
+		gtk_text_printf("Update Finish, Time cost: %d seconds\n", cost);
 	}
 
 	progress = -1;
